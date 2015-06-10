@@ -1,0 +1,22 @@
+#######################################
+# Syntax Coloring Map For DRAPRS
+#######################################
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+Beacon	KEYWORD1
+VHFBEACON	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin	KEYWORD2
+sinus	KEYWORD2
+sendpacket	KEYWORD2
+gpsnmea	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
