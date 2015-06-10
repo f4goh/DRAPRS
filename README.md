@@ -18,7 +18,7 @@ To use the DRAPRS library:
 ## Usage notes ##
 
 
-To use the 4x20 LCD char, the LiquidCrystal_I2C and WIRE libraries must also be included.
+To use 4x20 characters LCD Display, the LiquidCrystal_I2C and WIRE libraries must also be included.
 
 
 ```c++
