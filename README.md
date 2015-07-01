@@ -50,7 +50,7 @@ gps.begin(9600);
 DRA818 speed must be 9600 bauds
 
 ```c++
-gps.begin(9600);
+dra_serial.begin(9600);
 ```
 
 change frequency into dra_serial.println...
