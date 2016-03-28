@@ -1,9 +1,15 @@
 #ARDUINO APRS and DRA818 module library #
 F4GOH Anthony f4goh@orange.fr <br>
 
-June 2015
+Mars 2016
 
 Use this library freely with Arduino 1.0.6
+
+## Update protocols ##
+- APRS AFSK AX25 on freq1 ans freq2
+- RTTY 45 bauds on  freq1 + freq shift
+- Hellschreiber on freq1 
+(see command "Set pin number and Frequency" above)
 
 ## Installation ##
 To use the DRAPRS library:  
@@ -47,6 +53,12 @@ change GPS speed to 4800 bauds if you need
 ```c++
 gps.begin(9600);
 ```
+Set pin number and Frequency
+
+```c++
+ Beacon.begin(bfPin, ledPin, 1200, 2200, 350);   //analog pin, led pin, freq1, freq2, shift freq
+```
+
 DRA818 speed must be 9600 bauds
 
 ```c++
