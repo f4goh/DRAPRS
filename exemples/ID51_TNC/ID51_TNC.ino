@@ -38,13 +38,13 @@ SoftwareSerial id51(rxPin, txPin);  // RX, TX for ID51
 
 // track char array
 unsigned  char     track[86]={'F'<<1,'4'<<1,'G'<<1,'O'<<1,'H'<<1,' '<<1,0x60,              //avant APTT4 7 octets (0-6)
-                           'F'<<1,'4'<<1,'G'<<1,'O'<<1,'H'<<1,' '<<1,('0' + 12) << 1,     //F4GOH-11 7 octets (7-13)
+                           'F'<<1,'4'<<1,'G'<<1,'O'<<1,'H'<<1,' '<<1,('0' + 7) << 1,     //F4GOH-11 7 octets (7-13)
                            'W'<<1,'I'<<1,'D'<<1,'E'<<1,'1'<<1,' '<<1,('0' + 1) << 1,      //WIDE1-1 7 octets (14-20)
                            'W'<<1,'I'<<1,'D'<<1,'E'<<1,'2'<<1,' '<<1,('0' + 1) << 1 | 1 , //WIDE2-1   fin ssid lsb =1 7 octets (21-27)
                            0x03,0xf0,                                                     //ctrl, pid 2 octets (28-29)
                            '/','1','5','0','4','5','2','h',      //heure 8 (30-37)
                            '4','8','5','1','.','2','0','N','/','0','0','2','2','0','.','9','2','E',      //lat, long 18 octets (38-55)
-                           '>','7','3',' ','A','n','t','h','o','n','y',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '};               //commentaire 20 car octets (56-
+                           '[','7','3',' ','A','n','t','h','o','n','y',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '};               //commentaire 20 car octets (56-
                            
 
 typedef struct  {   //34 bytes
@@ -80,7 +80,7 @@ byte TX_enable=0;
 void setup(){
         Serial.begin(9600);
         id51.begin(9600);
-        Beacon.begin(bfPin,ledPin);
+        Beacon.begin(bfPin, ledPin, 1200, 2200, 350);   //analog pin, led pin, freq1, freq2, shift freq
         pinMode(bfPin, OUTPUT);
         pinMode(PTT, OUTPUT);
         digitalWrite(PTT, LOW);

@@ -26,17 +26,31 @@ class DRAPRS
    
    
    
-   void begin(int p_bf, int p_led);
+   void begin(int p_bf, int p_led, int f1,int f2, int f3);
    void sendpacket(unsigned char buffer[], unsigned char size_array);
    void gpsnmea(char byteGPS);
    void sinus();
-
+   void rttyTx(char * stringRtty);
+   	void rttyTxByte (char c);
+	void hellTx( char * stringHell);
+	
+   unsigned long computeDdsWord(double freq);
+   
    double freq;
    int sync;
    int led;
    int bf;
-    
+   double refclk;
+   byte flip_freq;
    
+   
+   
+   volatile unsigned long ddsAccu;   // phase accumulator
+   volatile unsigned long ddsWord;
+   volatile unsigned long ddsWord0;  // dds tuning word 0
+   volatile unsigned long ddsWord1;  // dds tuning word 1
+   volatile unsigned long ddsWord2;  // dds tuning word 1
+	
    typedef struct  {
   char hour[6+1];
   char Latitude[9+1];
@@ -65,7 +79,7 @@ class DRAPRS
   private:
   
   
-  void send_bit();
+  void send_bit(int tempo);
   unsigned char flip;
   
   

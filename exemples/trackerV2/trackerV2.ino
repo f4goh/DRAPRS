@@ -43,7 +43,8 @@ SoftwareSerial dra_serial(DRA_RXD, DRA_TXD);    //for DRA818
 
 SoftwareSerial gps(rxPin, txPin);  // RX, TX for GPS
 
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);    //4 lines *20 columns lcd char
+//LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);    //4 lines *20 columns lcd char
+LiquidCrystal_I2C lcd(0x27, 20, 4);    //4 lines *20 columns lcd char
 
 
 // track char array
@@ -56,15 +57,16 @@ unsigned  char     track[72]={'F'<<1,'4'<<1,'G'<<1,'O'<<1,'H'<<1,' '<<1,0x60,   
                            '4','8','5','1','.','2','0','N','/','0','0','2','2','0','.','9','2','E',      //lat, long 18 octets (38-55)
                            '>','7','3',' ','A','n','t','h','o','n','y',' ',' ',' ',' ',' '};               //commentaire 15 car octets (56-71)
                            
-                           
+char txString[50];
+int ptrChaine;
+
 
 void setup() {
   Serial.begin(57600);
   dra_serial.begin(9600);
-  gps.begin(9600);
+  gps.begin(4800);
   Beacon.begin(bfPin, ledPin, 1200, 2200, 350);   //analog pin, led pin, freq1, freq2, shift freq
 
-  //lcd.begin(4, 20);  //4 lines *20 columns lcd char
   lcd.begin();  //4 lines *20 columns lcd char
 
   lcd.setBacklight(HIGH);    
@@ -82,7 +84,7 @@ void setup() {
   pinMode(PTT, OUTPUT);
   digitalWrite(PTT, LOW);
 
-  Timer1.initialize(76);    //µs  fe=13200 hz so TE=76µs
+  Timer1.initialize(76);    //µs  fe=13200 hz so TE=76µs 13157.9 mesured
 
 
   Beacon.GPGGA.pperiod =10;   //interval between two tx
@@ -101,7 +103,7 @@ void loop() {      //don't add any long delay in loop because GPS data recogniti
   {
     Beacon.GPGGA.sync =0;      //txing sequence, so sync done
     /*
-                   Serial.println( Beacon.GPGGA.hour);          //print some GPS info
+     Serial.println( Beacon.GPGGA.hour);          //print some GPS info
      Serial.print( Beacon.GPGGA.Latitude);
      Serial.println( Beacon.GPGGA.NS);
      Serial.print( Beacon.GPGGA.Longitude);
@@ -125,21 +127,56 @@ void loop() {      //don't add any long delay in loop because GPS data recogniti
     lcd.setCursor(0, 3);              
     lcd.print(Beacon.GPGGA.altitude);            
 
-    memcpy(track +31, Beacon.GPGGA.hour, 6);      //prepare char array track to send
+    memcpy(track +31, Beacon.GPGGA.hour, 6);      //prepare APRS char array track to send
     memcpy(track +38, Beacon.GPGGA.Latitude, 7);     //beware index number from char array
     track[45] = Beacon.GPGGA.NS;
     memcpy(track +47, Beacon.GPGGA.Longitude, 8);
     track[55] = Beacon.GPGGA.EO;
+
+
+    ptrChaine=0;                                 //prepare RTTY char array track to send                              
+    addstring(txString, "     F4GOH ", 11);
+    addstring(txString, Beacon.GPGGA.hour, 6);
+    addchar(txString, '-');
+    addstring(txString, Beacon.GPGGA.Latitude, 7);
+    addchar(txString, Beacon.GPGGA.NS);
+    addchar(txString, '-');
+    addstring(txString, Beacon.GPGGA.Longitude, 8);
+    addchar(txString, Beacon.GPGGA.EO);
+    addchar(txString, '-');
+    addchar(txString, 0);
+
+
     //for (int n=0;n<sizeof(track);n++) {Serial.print(track[n],HEX);Serial.print(",");}    //print char array track (for  info)
     //Serial.println();
-    Serial.flush();      //purge Serialout before txing
+    Serial.flush();      //purge Serialout before txing*/
+
     txing();
+
+    // delay(2000);
+
+
     lcd.setCursor(18, 0);    
     lcd.print(F("  "));
 
     Serial.println("TX Done");      //Roger it's done
   }
 }
+
+void addstring(char *dest, char *source, int taille)
+{
+  memcpy(dest+ptrChaine, source, taille); 
+  ptrChaine+=taille;
+}
+
+
+void addchar(char *dest, char source)
+{
+  dest[ptrChaine]=source;
+  ptrChaine++;
+}
+
+
 
 /*
 +DMOSETGROUP:0  //command sucessfull 0x30,0xd,0xa
@@ -186,6 +223,8 @@ void txing()
   PCICR = 0;                           //disable external pin interrupt
   Timer1.attachInterrupt(sinus_irq);   //warp interrupt in library
   Beacon.sendpacket(track, sizeof(track));  //send packet
+  Beacon.rttyTx(txString);                 //send rtty
+  Beacon.hellTx(txString);                 //send Hellschreiber
   digitalWrite(PTT, LOW);              //PTT off
   digitalWrite(PwDw, LOW);               //Power down
   Timer1.detachInterrupt();            //disable timer1 interrupt
