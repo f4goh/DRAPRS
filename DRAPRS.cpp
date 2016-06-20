@@ -15,6 +15,7 @@
 #include <DRAPRS.h>
 
 
+
 DRAPRS Beacon;
 
 
@@ -27,6 +28,10 @@ DRAPRS::DRAPRS(){
  GPGGA.dumpNmea=false;
  sinusPtr=0;
  countPtr=0;
+ timeElapsed=0;
+ GPGGA.time=0;
+ timePrec=0;
+ ptrStartNmea=0;
 }
 
 void DRAPRS::begin(int p_bf, int p_led, int f1,int f2, int f3) {
@@ -42,7 +47,7 @@ void DRAPRS::begin(int p_bf, int p_led, int f1,int f2, int f3) {
  
  ddsWord0=DRAPRS::computeDdsWord(f1);
  ddsWord1=DRAPRS::computeDdsWord(f2);
- ddsWord2=DRAPRS::computeDdsWord(f1+f3);
+ ddsWord2=DRAPRS::computeDdsWord(f1-f3);
  
  
 }
@@ -225,7 +230,7 @@ void DRAPRS::rttyTxByte(char c){
  for(int b = 7; b >= 0; b--) // MSB first
  {
   val = bitRead(c,b); // Read 1 bit
- if (val==0) ddsWord=ddsWord0; else ddsWord=ddsWord2; // Let's transmit (bit 1 is shifted)
+ if (val==0) ddsWord=ddsWord2; else ddsWord=ddsWord0; // Let's transmit (bit 1 is shifted)
  DRAPRS::send_bit(292); //baud rate
  }
 }
@@ -287,11 +292,40 @@ const static word GlyphTab[59][8] PROGMEM = {
  }
 }
 
+byte DRAPRS::validNmea(char byteGPS)
+{
+  if (ptrStartNmea<5) {
+	if (byteGPS=='$') ptrStartNmea++;
+	Serial.write('S');
+	return 0;
+  }
+  else return 1;
+}  
   
+  
+  
+ void DRAPRS::clearGps(void)
+ {
+ 	GPGGA.sync=1; 
+	sentence_status=0;
+	comma_count=0;
+	GPGGA.nbSat=0;
+	ptr=0;
+	GPGGA.fix=0;
+	timeElapsed=0;
+	timePrec=GPGGA.time;
+	ptrStartNmea=0;
+ }
+ 
+ 
+ 
   
  void DRAPRS::gpsnmea(char byteGPS)
 {
- if( GPGGA.dumpNmea==true)Serial.print((char)byteGPS);
+ if( GPGGA.dumpNmea==true) Serial.print((char)byteGPS);
+ 
+   if (validNmea(byteGPS)==0) return;
+  
  switch (byteGPS)
 {
   case '$' : if (sentence_status==0) {
@@ -313,17 +347,43 @@ const static word GlyphTab[59][8] PROGMEM = {
                                        switch (comma_count)
                                        {
                                       case 1 :   GPGGA.hour[ptr]=0;
-                                                 if (GPGGA.fix==1) {
+                                                 if (GPGGA.fix>0) {
 																	GPGGA.secondes=(GPGGA.hour[4]-'0')*10+GPGGA.hour[5]-'0';
+																	GPGGA.minutes=(GPGGA.hour[2]-'0')*10+GPGGA.hour[3]-'0';
+																	GPGGA.time=parseDecimal(GPGGA.hour);
+																	timeElapsed=GPGGA.time-timePrec;
 																	if (GPGGA.debug==true) {Serial.print(F("Hour :")); Serial.println(GPGGA.hour);}
-																	if ((GPGGA.secondes%GPGGA.pperiod)==0) GPGGA.sync=1; else GPGGA.sync=0;
+																	//Serial.println(timeElapsed);
+																	if (Beacon.GPGGA.mode==0){
+																	 if ((timeElapsed/100)>=GPGGA.pperiod){
+																			clearGps();
+																	}
+																	}
+																	if (Beacon.GPGGA.mode==1){
+																	  if (GPGGA.neo=='N') {
+																	     if ((GPGGA.secondes>GPGGA.Ndelay) && (GPGGA.secondes<(GPGGA.Ndelay+5)))  {
+																			clearGps();
+																	      }
+																		 }
+																	  if (GPGGA.neo=='E') {
+																	     if ((GPGGA.secondes>GPGGA.Ndelay) && (GPGGA.secondes<(GPGGA.Ndelay+5)) && ((GPGGA.minutes%2)==0)) {
+																			clearGps();
+																	      }
+																		 }
+																	  if (GPGGA.neo=='O') {
+																	     if ((GPGGA.secondes>GPGGA.Ndelay) && (GPGGA.secondes<(GPGGA.Ndelay+5)) && ((GPGGA.minutes%2)==1)) {
+																			clearGps();
+																	      }
+																		 }
+																	}
+																	//if ((GPGGA.secondes>0) && (GPGGA.secondes<3)) GPGGA.sync=1; else GPGGA.sync=0;
 																	}
 												break; 
                                       case 2 :   GPGGA.Latitude[ptr]=0;
 												 break; 
                                       case 4 :   GPGGA.Longitude[ptr]=0;
 												 break; 
-                                      case 6 :  if (GPGGA.fix==1) digitalWrite(led, HIGH); else {
+                                      case 6 :  if (GPGGA.fix>0) digitalWrite(led, HIGH); else {
 																									digitalWrite(led, digitalRead(led)^1);
 																								    if (GPGGA.debug==true)		{
 																																	Serial.print(F("Nb sat :"));
@@ -372,6 +432,23 @@ const static word GlyphTab[59][8] PROGMEM = {
                        }
  }
 }
+ 
+ 
+ int32_t DRAPRS::parseDecimal(const char *term)
+{
+  bool negative = *term == '-';
+  if (negative) ++term;
+  int32_t ret = 100 * (int32_t)atol(term);
+  while (isdigit(*term)) ++term;
+  if (*term == '.' && isdigit(term[1]))
+  {
+    ret += 10 * (term[1] - '0');
+    if (isdigit(term[2]))
+      ret += term[2] - '0';
+  }
+  return negative ? -ret : ret;
+}
+
  
  /*
 //sinus table, generate with processing.org

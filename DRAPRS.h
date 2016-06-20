@@ -61,32 +61,44 @@ class DRAPRS
   char sat[2+1];
   char altitude[7+1];
   byte secondes;     //secondes in byte from hour
-  byte pperiod;      //second order
+  byte minutes;     //minutes in byte from hour
+  unsigned int pperiod;      //second order
   byte sync;     //flag to send (matching for secondes%pperiod==0)
+  int32_t time;
   boolean debug;
   boolean dumpNmea;
+  byte mode;
+  char neo;
+  byte Ndelay;
   int nbSat;
   long altidudeMeters;
   long altidudeFeet;
   char feet[15];
-  } GGAstruct;
+    } GGAstruct;
   GGAstruct GPGGA;    //declare la structure
    
   volatile int sinusPtr;
   volatile int countPtr;
   volatile int shift;
- 
-  private:
   
+    byte ptrStartNmea;
+  
+  private:
+ 
+  int32_t parseDecimal(const char *term);
+  int32_t timePrec;
+  unsigned int timeElapsed;
   
   void send_bit(int tempo);
   unsigned char flip;
+
   
-  
+  byte validNmea(char byteGPS);
   void sendbyte (unsigned char inbyte);
   void fcsbit(unsigned short tbyte);
   void flipout(void);
- 
+  void clearGps(void);
+  
   
   unsigned char stuff,flag,fcsflag;
  
@@ -97,7 +109,7 @@ class DRAPRS
   char sentenceType[5+1];     //GPxxx
   int ptr;                  //ptr for cahr arrays
   int comma_count;          //count , into sentences 
-
+  //byte timeModulo;
   
 };
 

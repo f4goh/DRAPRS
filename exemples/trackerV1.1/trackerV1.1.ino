@@ -44,33 +44,29 @@ SoftwareSerial dra_serial(DRA_RXD, DRA_TXD);    //for DRA818
 SoftwareSerial gps(rxPin, txPin);  // RX, TX for GPS
 
 //LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);    //4 lines *20 columns lcd char
-
 LiquidCrystal_I2C lcd(0x27, 20, 4);    //4 lines *20 columns lcd char
 
 // track char array
 unsigned  char     track[72]={'F'<<1,'4'<<1,'G'<<1,'O'<<1,'H'<<1,' '<<1,0x60,              //avant APTT4 7 octets (0-6)
-                           'F'<<1,'6'<<1,'K'<<1,'F'<<1,'I'<<1,' '<<1,('0' + 12) << 1,     //F4GOH-11 7 octets (7-13)
+                           'F'<<1,'4'<<1,'G'<<1,'O'<<1,'H'<<1,' '<<1,('0' + 12) << 1,     //F4GOH-11 7 octets (7-13)
                            'W'<<1,'I'<<1,'D'<<1,'E'<<1,'1'<<1,' '<<1,('0' + 1) << 1,      //WIDE1-1 7 octets (14-20)
                            'W'<<1,'I'<<1,'D'<<1,'E'<<1,'2'<<1,' '<<1,('0' + 1) << 1 | 1 , //WIDE2-1   fin ssid lsb =1 7 octets (21-27)
                            0x03,0xf0,                                                     //ctrl, pid 2 octets (28-29)
                            '/','1','5','0','4','5','2','h',      //heure 8 (30-37)
                            '4','8','5','1','.','2','0','N','/','0','0','2','2','0','.','9','2','E',      //lat, long 18 octets (38-55)
-                           '>','B','a','l','l','o','n',' ','G','.','T','o','u','c','h','.'};               //commentaire 15 car octets (56-71)
+                           '>','7','3',' ','A','n','t','h','o','n','y',' ',' ',' ',' ',' '};               //commentaire 15 car octets (56-71)
                            
-char txString[60];
-int ptrChaine;
-
+                           
 
 void setup() {
   Serial.begin(57600);
- // dra_serial.begin(9600);
-  gps.begin(4800);
-  //gps.begin(9600);
- 
+  dra_serial.begin(9600);
+  gps.begin(9600);
   Beacon.begin(bfPin, ledPin, 1200, 2200, 350);   //analog pin, led pin, freq1, freq2, shift freq
 
+  //lcd.begin(4, 20);  //4 lines *20 columns lcd char
   lcd.begin();  //4 lines *20 columns lcd char
-/*
+
   lcd.setBacklight(HIGH);    
   lcd.clear();
   lcd.print(F("  APRS TRACKER v1.0"));    //intro
@@ -78,7 +74,7 @@ void setup() {
   lcd.print(F("     F4GOH 2015"));
   delay(4000);
   lcd.clear();
-*/
+
   pinMode(PwDw, OUTPUT);        //config dra818 ctrl lines
   pinMode(bfPin, OUTPUT);
   digitalWrite(PwDw, LOW);
@@ -86,29 +82,26 @@ void setup() {
   pinMode(PTT, OUTPUT);
   digitalWrite(PTT, LOW);
 
-  Timer1.initialize(76);    //µs  fe=13200 hz so TE=76µs 13157.9 mesured
+  Timer1.initialize(76);    //µs  fe=13200 hz so TE=76µs
 
 
-  Beacon.GPGGA.pperiod = 2;   //interval between two tx minutes
+  Beacon.GPGGA.pperiod =10;   //interval between two tx
   Beacon.GPGGA.debug = true;   //allow debug print char
   Beacon.GPGGA.dumpNmea = false;   //allow print nmea sentence
 
     //uncomment if you want to config dra818 frequency     
-   //   if (configDra818()==1) Serial.println("freq update"); else Serial.println("freq update error");
+  //    if (configDra818()==1) Serial.println("freq update"); else Serial.println("freq update error");
 }
 
 
 void loop() {      //don't add any long delay in loop because GPS data recognition will be crash
 
   if (gps.available()) Beacon.gpsnmea(gps.read());   //if  char into software serial decode nmea sentence
-  //while (gps.available()) {Beacon.gpsnmea(gps.read());}   //if  char into software serial decode nmea sentence
   if (Beacon.GPGGA.sync ==1) // test if  is time to txing
   {
     Beacon.GPGGA.sync =0;      //txing sequence, so sync done
-    Beacon.GPGGA.hour[4]='1';
-    Beacon.GPGGA.hour[5]='5';
     /*
-     Serial.println( Beacon.GPGGA.hour);          //print some GPS info
+                   Serial.println( Beacon.GPGGA.hour);          //print some GPS info
      Serial.print( Beacon.GPGGA.Latitude);
      Serial.println( Beacon.GPGGA.NS);
      Serial.print( Beacon.GPGGA.Longitude);
@@ -119,7 +112,6 @@ void loop() {      //don't add any long delay in loop because GPS data recogniti
      Serial.println( Beacon.GPGGA.altidudeFeet);    //altitude feet in long
      Serial.println( Beacon.GPGGA.feet);            //altitude feet in char array
      */
-     
     lcd.setCursor(0, 0);                      //Print GPS info to lcd
     lcd.print(Beacon.GPGGA.hour);            
     lcd.setCursor(18, 0);
@@ -133,60 +125,21 @@ void loop() {      //don't add any long delay in loop because GPS data recogniti
     lcd.setCursor(0, 3);              
     lcd.print(Beacon.GPGGA.altitude);            
 
-    memcpy(track +31, Beacon.GPGGA.hour, 6);      //prepare APRS char array track to send
+    memcpy(track +31, Beacon.GPGGA.hour, 6);      //prepare char array track to send
     memcpy(track +38, Beacon.GPGGA.Latitude, 7);     //beware index number from char array
     track[45] = Beacon.GPGGA.NS;
     memcpy(track +47, Beacon.GPGGA.Longitude, 8);
     track[55] = Beacon.GPGGA.EO;
-
-
-    ptrChaine=0;                                 //prepare RTTY char array track to send                              
-    addstring(txString, "     F6KFI ", 11);
-    addstring(txString, Beacon.GPGGA.hour, 6);
-    addchar(txString, '-');
-    addstring(txString, Beacon.GPGGA.Latitude, 7);
-    addchar(txString, Beacon.GPGGA.NS);
-    addchar(txString, '-');
-    addstring(txString, Beacon.GPGGA.Longitude, 8);
-    addchar(txString, Beacon.GPGGA.EO);
-    addchar(txString, '-');
-//    addchar(txString, 0);
-    addstring(txString, Beacon.GPGGA.altitude,7);
-    addchar(txString, '-');
-    addchar(txString, 0);
-
-
     //for (int n=0;n<sizeof(track);n++) {Serial.print(track[n],HEX);Serial.print(",");}    //print char array track (for  info)
     //Serial.println();
-    Serial.flush();      //purge Serialout before txing*/
-    Serial.println("TX enable");
-    
+    Serial.flush();      //purge Serialout before txing
     txing();
-
-    //delay(10000L);
-
-
     lcd.setCursor(18, 0);    
     lcd.print(F("  "));
 
     Serial.println("TX Done");      //Roger it's done
   }
 }
-
-void addstring(char *dest, char *source, int taille)
-{
-  memcpy(dest+ptrChaine, source, taille); 
-  ptrChaine+=taille;
-}
-
-
-void addchar(char *dest, char source)
-{
-  dest[ptrChaine]=source;
-  ptrChaine++;
-}
-
-
 
 /*
 +DMOSETGROUP:0  //command sucessfull 0x30,0xd,0xa
@@ -202,8 +155,7 @@ byte configDra818()
   int n;
   digitalWrite(PwDw, HIGH);
   delay(2000);  //wait 2000ms to be awake
-  //dra_serial.println(F("AT+DMOSETGROUP=0,144.8000,144.8000,0000,4,0000"));
-  dra_serial.println(F("AT+DMOSETGROUP=0,432.5000,432.5000,0000,4,0000"));
+  dra_serial.println(F("AT+DMOSETGROUP=0,144.8000,144.8000,0000,4,0000"));
   ack[2]=0;
   while (ack[2]!=0xa)
   {
@@ -234,8 +186,6 @@ void txing()
   PCICR = 0;                           //disable external pin interrupt
   Timer1.attachInterrupt(sinus_irq);   //warp interrupt in library
   Beacon.sendpacket(track, sizeof(track));  //send packet
-  Beacon.rttyTx(txString);                 //send rtty
-  Beacon.hellTx(txString);                 //send Hellschreiber
   digitalWrite(PTT, LOW);              //PTT off
   digitalWrite(PwDw, LOW);               //Power down
   Timer1.detachInterrupt();            //disable timer1 interrupt
@@ -243,7 +193,6 @@ void txing()
   TCCR0B = TCCR0B & 0b11111000 | 3;    //register return to normal
   TIMSK0 =save_TIMSK0;
   PCICR = save_PCICR;
-   gps.begin(4800);
 }
 
 
