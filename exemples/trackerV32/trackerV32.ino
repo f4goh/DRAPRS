@@ -16,8 +16,8 @@
  
  */
 
-//#define AFFLCD
-#define RTTYHELL
+#define AFFLCD
+//#define RTTYHELL
 #define SDCARD
 #define COMMANDMENU
 
@@ -118,7 +118,8 @@ byte debug=1;
 byte dumpNMEA=0;
 byte ssid=10;
 char symbol='>';
-byte trackSize=106;
+//byte trackSize=106;
+byte trackSize=72;
 int baudrate=9600;
 char freq[9];
 char call[7];
@@ -151,7 +152,6 @@ void setup() {
   digitalWrite(PTT, LOW);
 
   Timer1.initialize(76);    //µs  fe=13200 hz so TE=76µs 13157.9 mesured
-
 
   if  (detectMenu()==1) EepromMenu();
   updateAll();
@@ -781,11 +781,15 @@ void updatetrack(char car, int ptrTrack, byte shiftEnable)
   int nbcar;
   int prtcar;
   int n, m;
+  char c;
   n=int(car-0x41);
   prtcar=int(pgm_read_word(&epromPtr[n]));
   nbcar=int(pgm_read_word(&nbCharPtr[n]));  
-  for (m=0;m<nbcar;m++) if (shiftEnable==1) track[ptrTrack+m]=EEPROM.read(prtcar+m)<<1; 
-  else track[ptrTrack+m]=EEPROM.read(prtcar+m);
+  for (m=0;m<nbcar;m++){ 
+        c=EEPROM.read(prtcar+m);
+        if(c==0) c=c+0x20;
+     if (shiftEnable==1) track[ptrTrack+m]=c<<1; else track[ptrTrack+m]=c;   
+  }
 }
 
 
